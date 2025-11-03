@@ -1,6 +1,8 @@
 package asymmetric
 
-import "github.com/mirrorblade/crypto/core"
+import (
+	"github.com/mirrorblade/crypto/core"
+)
 
 type Provider interface {
 	Encrypt(plaintext []byte) ([]byte, error)
@@ -10,11 +12,11 @@ type Provider interface {
 type AsymmetricProvider struct {
 	algorithmType AlgorithmType
 
-	publicKey  []byte
-	privateKey []byte
+	publicKey  any
+	privateKey any
 }
 
-func NewProvider(algorithmType AlgorithmType, publicKey, privateKey []byte) (*AsymmetricProvider, error) {
+func NewProvider(algorithmType AlgorithmType, publicKey, privateKey any) (*AsymmetricProvider, error) {
 	switch algorithmType {
 	case RSA1024, RSA2048, RSA3072, RSA4096, RSA8192,
 		P224, P256, P384, P521:

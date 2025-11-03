@@ -5,9 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha512"
-	"crypto/x509"
 	"encoding/binary"
-	"encoding/pem"
 	"io"
 	"math/big"
 
@@ -32,9 +30,9 @@ func (ap *AsymmetricProvider) encryptEC(plaintext []byte) ([]byte, error) {
 		return nil, core.ErrUnknownAlgorithmType
 	}
 
-	publicKey, err := ap.publicKeyToEC()
-	if err != nil {
-		return nil, err
+	publicKey, ok := ap.publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, core.ErrInvalidPublicKey
 	}
 
 	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
@@ -80,9 +78,9 @@ func (ap *AsymmetricProvider) decryptEC(ciphertext []byte) ([]byte, error) {
 		return nil, core.ErrUnknownAlgorithmType
 	}
 
-	privateKey, err := ap.privateKeyToEC()
-	if err != nil {
-		return nil, err
+	privateKey, ok := ap.privateKey.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, core.ErrInvalidPrivateKey
 	}
 
 	ephemX, ephemY, salt, ciphertext, err := ap.unpackDataForEC(ciphertext)
@@ -100,44 +98,6 @@ func (ap *AsymmetricProvider) decryptEC(ciphertext []byte) ([]byte, error) {
 	}
 
 	return plaintext, nil
-}
-
-func (ap *AsymmetricProvider) privateKeyToEC() (*ecdsa.PrivateKey, error) {
-	block, _ := pem.Decode(ap.privateKey)
-	if block == nil {
-		return nil, core.ErrFailedPEMBlockParsing
-	}
-
-	untypedPrivateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, core.ErrInvalidPEMBlock
-	}
-
-	privateKey, ok := untypedPrivateKey.(*ecdsa.PrivateKey)
-	if !ok {
-		return nil, core.ErrInvalidPrivateKey
-	}
-
-	return privateKey, nil
-}
-
-func (ap *AsymmetricProvider) publicKeyToEC() (*ecdsa.PublicKey, error) {
-	block, _ := pem.Decode(ap.publicKey)
-	if block == nil {
-		return nil, core.ErrFailedPEMBlockParsing
-	}
-
-	untypedPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, core.ErrInvalidPKIXKey
-	}
-
-	publicKey, ok := untypedPublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, core.ErrInvalidPublicKey
-	}
-
-	return publicKey, nil
 }
 
 func (ap *AsymmetricProvider) packDataForEC(ephemX, ephemY, salt, ciphertext []byte) []byte {
