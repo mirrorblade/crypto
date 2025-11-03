@@ -1,6 +1,6 @@
 package asymmetric
 
-import "github.com/mirrorblade/crypto"
+import "github.com/mirrorblade/crypto/core"
 
 type AlgorithmType string
 
@@ -46,51 +46,51 @@ func (al AlgorithmType) Type() string {
 	return string(al)
 }
 
-type Manager interface {
+type Provider interface {
 	Encrypt(plaintext []byte) ([]byte, error)
 	Decrypt(ciphertext []byte) ([]byte, error)
 }
 
-type AsymmetricManager struct {
+type AsymmetricProvider struct {
 	algorithmType AlgorithmType
 
 	publicKey  []byte
 	privateKey []byte
 }
 
-func NewManager(algorithmType AlgorithmType, publicKey, privateKey []byte) (*AsymmetricManager, error) {
+func NewProvider(algorithmType AlgorithmType, publicKey, privateKey []byte) (*AsymmetricProvider, error) {
 	switch algorithmType {
 	case RSA1024, RSA2048, RSA3072, RSA4096, RSA8192,
 		P224, P256, P384, P521:
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
-	return &AsymmetricManager{
+	return &AsymmetricProvider{
 		algorithmType: algorithmType,
 		publicKey:     publicKey,
 		privateKey:    privateKey,
 	}, nil
 }
 
-func (am *AsymmetricManager) Encrypt(plaintext []byte) ([]byte, error) {
-	switch am.algorithmType {
+func (ap *AsymmetricProvider) Encrypt(plaintext []byte) ([]byte, error) {
+	switch ap.algorithmType {
 	case RSA1024, RSA2048, RSA3072, RSA4096, RSA8192:
-		return am.encryptRSA(plaintext)
+		return ap.encryptRSA(plaintext)
 	case P224, P256, P384, P521:
-		return am.encryptEC(plaintext)
+		return ap.encryptEC(plaintext)
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 }
 
-func (am *AsymmetricManager) Decrypt(ciphertext []byte) ([]byte, error) {
-	switch am.algorithmType {
+func (ap *AsymmetricProvider) Decrypt(ciphertext []byte) ([]byte, error) {
+	switch ap.algorithmType {
 	case RSA1024, RSA2048, RSA3072, RSA4096, RSA8192:
-		return am.decryptRSA(ciphertext)
+		return ap.decryptRSA(ciphertext)
 	case P224, P256, P384, P521:
-		return am.decryptEC(ciphertext)
+		return ap.decryptEC(ciphertext)
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 }

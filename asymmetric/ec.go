@@ -11,15 +11,15 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 )
 
 const SaltSize int = 32
 
-func (am *AsymmetricManager) encryptEC(plaintext []byte) ([]byte, error) {
+func (ap *AsymmetricProvider) encryptEC(plaintext []byte) ([]byte, error) {
 	var curve elliptic.Curve
 
-	switch am.algorithmType {
+	switch ap.algorithmType {
 	case P224:
 		curve = elliptic.P224()
 	case P256:
@@ -29,10 +29,10 @@ func (am *AsymmetricManager) encryptEC(plaintext []byte) ([]byte, error) {
 	case P521:
 		curve = elliptic.P521()
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
-	publicKey, err := am.publicKeyToEC()
+	publicKey, err := ap.publicKeyToEC()
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (am *AsymmetricManager) encryptEC(plaintext []byte) ([]byte, error) {
 		ciphertext[i] = plaintext[i] ^ mask[i%len(mask)]
 	}
 
-	return am.packDataForEC(
+	return ap.packDataForEC(
 		privateKey.X.Bytes(),
 		privateKey.Y.Bytes(),
 		salt,
@@ -64,10 +64,10 @@ func (am *AsymmetricManager) encryptEC(plaintext []byte) ([]byte, error) {
 	), nil
 }
 
-func (am *AsymmetricManager) decryptEC(ciphertext []byte) ([]byte, error) {
+func (ap *AsymmetricProvider) decryptEC(ciphertext []byte) ([]byte, error) {
 	var curve elliptic.Curve
 
-	switch am.algorithmType {
+	switch ap.algorithmType {
 	case P224:
 		curve = elliptic.P224()
 	case P256:
@@ -77,15 +77,15 @@ func (am *AsymmetricManager) decryptEC(ciphertext []byte) ([]byte, error) {
 	case P521:
 		curve = elliptic.P521()
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
-	privateKey, err := am.privateKeyToEC()
+	privateKey, err := ap.privateKeyToEC()
 	if err != nil {
 		return nil, err
 	}
 
-	ephemX, ephemY, salt, ciphertext, err := am.unpackDataForEC(ciphertext)
+	ephemX, ephemY, salt, ciphertext, err := ap.unpackDataForEC(ciphertext)
 	if err != nil {
 		return nil, err
 	}
@@ -102,57 +102,57 @@ func (am *AsymmetricManager) decryptEC(ciphertext []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-func (am *AsymmetricManager) privateKeyToEC() (*ecdsa.PrivateKey, error) {
-	block, _ := pem.Decode(am.privateKey)
+func (ap *AsymmetricProvider) privateKeyToEC() (*ecdsa.PrivateKey, error) {
+	block, _ := pem.Decode(ap.privateKey)
 	if block == nil {
-		return nil, crypto.ErrFailedPEMBlockParsing
+		return nil, core.ErrFailedPEMBlockParsing
 	}
 
 	untypedPrivateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, crypto.ErrInvalidPEMBlock
+		return nil, core.ErrInvalidPEMBlock
 	}
 
 	privateKey, ok := untypedPrivateKey.(*ecdsa.PrivateKey)
 	if !ok {
-		return nil, crypto.ErrInvalidPrivateKey
+		return nil, core.ErrInvalidPrivateKey
 	}
 
 	return privateKey, nil
 }
 
-func (am *AsymmetricManager) publicKeyToEC() (*ecdsa.PublicKey, error) {
-	block, _ := pem.Decode(am.publicKey)
+func (ap *AsymmetricProvider) publicKeyToEC() (*ecdsa.PublicKey, error) {
+	block, _ := pem.Decode(ap.publicKey)
 	if block == nil {
-		return nil, crypto.ErrFailedPEMBlockParsing
+		return nil, core.ErrFailedPEMBlockParsing
 	}
 
 	untypedPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return nil, crypto.ErrInvalidPKIXKey
+		return nil, core.ErrInvalidPKIXKey
 	}
 
 	publicKey, ok := untypedPublicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, crypto.ErrInvalidPublicKey
+		return nil, core.ErrInvalidPublicKey
 	}
 
 	return publicKey, nil
 }
 
-func (am *AsymmetricManager) packDataForEC(ephemX, ephemY, salt, ciphertext []byte) []byte {
-	xBytes := fixSize(ephemX, am.algorithmType.Size())
-	yBytes := fixSize(ephemY, am.algorithmType.Size())
+func (ap *AsymmetricProvider) packDataForEC(ephemX, ephemY, salt, ciphertext []byte) []byte {
+	xBytes := fixSize(ephemX, ap.algorithmType.Size())
+	yBytes := fixSize(ephemY, ap.algorithmType.Size())
 
-	totalSize := 2*am.algorithmType.Size() + SaltSize + 4 + len(ciphertext)
+	totalSize := 2*ap.algorithmType.Size() + SaltSize + 4 + len(ciphertext)
 	result := make([]byte, totalSize)
 	offset := 0
 
 	copy(result[offset:], xBytes)
-	offset += am.algorithmType.Size()
+	offset += ap.algorithmType.Size()
 
 	copy(result[offset:], yBytes)
-	offset += am.algorithmType.Size()
+	offset += ap.algorithmType.Size()
 
 	copy(result[offset:], salt)
 	offset += SaltSize
@@ -164,18 +164,18 @@ func (am *AsymmetricManager) packDataForEC(ephemX, ephemY, salt, ciphertext []by
 	return result
 }
 
-func (am *AsymmetricManager) unpackDataForEC(data []byte) (ephemX *big.Int, ephemY *big.Int, salt []byte, ciphertext []byte, err error) {
-	if len(data) < 2*am.algorithmType.Size()+SaltSize+4 {
-		return nil, nil, nil, nil, crypto.ErrCipherTextInvalidLength
+func (ap *AsymmetricProvider) unpackDataForEC(data []byte) (ephemX *big.Int, ephemY *big.Int, salt []byte, ciphertext []byte, err error) {
+	if len(data) < 2*ap.algorithmType.Size()+SaltSize+4 {
+		return nil, nil, nil, nil, core.ErrCipherTextInvalidLength
 	}
 
 	offset := 0
 
-	ephemX = new(big.Int).SetBytes(data[offset : offset+am.algorithmType.Size()])
-	offset += am.algorithmType.Size()
+	ephemX = new(big.Int).SetBytes(data[offset : offset+ap.algorithmType.Size()])
+	offset += ap.algorithmType.Size()
 
-	ephemY = new(big.Int).SetBytes(data[offset : offset+am.algorithmType.Size()])
-	offset += am.algorithmType.Size()
+	ephemY = new(big.Int).SetBytes(data[offset : offset+ap.algorithmType.Size()])
+	offset += ap.algorithmType.Size()
 
 	salt = make([]byte, SaltSize)
 	copy(salt, data[offset:offset+SaltSize])
@@ -185,7 +185,7 @@ func (am *AsymmetricManager) unpackDataForEC(data []byte) (ephemX *big.Int, ephe
 	offset += 4
 
 	if offset+cipherTextLength > len(data) {
-		return nil, nil, nil, nil, crypto.ErrCipherTextInvalidLength
+		return nil, nil, nil, nil, core.ErrCipherTextInvalidLength
 	}
 
 	ciphertext = make([]byte, cipherTextLength)

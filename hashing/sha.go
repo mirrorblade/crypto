@@ -7,13 +7,13 @@ import (
 	"crypto/subtle"
 	"hash"
 
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 )
 
-func (hm *HashingManager) hashSHA(data []byte, salt []byte) ([]byte, error) {
+func (hp *HashingProvider) hashSHA(data []byte, salt []byte) ([]byte, error) {
 	var hasher hash.Hash
 
-	switch hm.algorithmType {
+	switch hp.algorithmType {
 	case SHA224:
 		hasher = sha256.New224()
 	case SHA256:
@@ -35,7 +35,7 @@ func (hm *HashingManager) hashSHA(data []byte, salt []byte) ([]byte, error) {
 	case SHA3_512:
 		hasher = sha3.New512()
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
 	if len(salt) > 0 {
@@ -47,8 +47,8 @@ func (hm *HashingManager) hashSHA(data []byte, salt []byte) ([]byte, error) {
 	return hasher.Sum(nil), nil
 }
 
-func (hm *HashingManager) verifySHA(data, salt, expectedHash []byte) (bool, error) {
-	hash, err := hm.hashSHA(data, salt)
+func (hp *HashingProvider) verifySHA(data, salt, expectedHash []byte) (bool, error) {
+	hash, err := hp.hashSHA(data, salt)
 	if err != nil {
 		return false, err
 	}

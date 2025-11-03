@@ -6,11 +6,11 @@ import (
 	"crypto/rand"
 	"io"
 
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 )
 
-func (sm *SymmetricManager) encryptAES(plaintext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(sm.secretKey)
+func (sp *SymmetricProvider) encryptAES(plaintext []byte) ([]byte, error) {
+	block, err := aes.NewCipher(sp.secretKey)
 	if err != nil {
 		return nil, err
 	}
@@ -28,8 +28,8 @@ func (sm *SymmetricManager) encryptAES(plaintext []byte) ([]byte, error) {
 	return gcm.Seal(nonce, nonce, plaintext, nil), nil
 }
 
-func (sm *SymmetricManager) decryptAES(ciphertext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(sm.secretKey)
+func (sp *SymmetricProvider) decryptAES(ciphertext []byte) ([]byte, error) {
+	block, err := aes.NewCipher(sp.secretKey)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (sm *SymmetricManager) decryptAES(ciphertext []byte) ([]byte, error) {
 
 	nonceSize := gcm.NonceSize()
 	if len(ciphertext) < nonceSize {
-		return nil, crypto.ErrCipherTextInvalidLength
+		return nil, core.ErrCipherTextInvalidLength
 	}
 
 	nonce, ciphertextOnly := ciphertext[:nonceSize], ciphertext[nonceSize:]

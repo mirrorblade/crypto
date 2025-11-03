@@ -1,7 +1,7 @@
 package hashing
 
 import (
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 )
 
 type AlgorithmType string
@@ -55,68 +55,68 @@ func (al AlgorithmType) Type() string {
 	return string(al)
 }
 
-type Manager interface {
+type Provider interface {
 	Hash(data, salt []byte) ([]byte, error)
 	VerifyHash(data, salt, expectedHash []byte) (bool, error)
 }
 
-type HashingManager struct {
+type HashingProvider struct {
 	algorithmType AlgorithmType
 
 	argon2Config Argon2Config
 }
 
-func NewManager(algorithmType AlgorithmType) (*HashingManager, error) {
+func NewProvider(algorithmType AlgorithmType) (*HashingProvider, error) {
 	switch algorithmType {
 	case SHA224, SHA256, SHA384, SHA512, SHA512_224, SHA512_256,
 		SHA3_224, SHA3_256, SHA3_384, SHA3_512,
 		Bcrypt, BcryptMin, BcryptMax,
 		Argon2Interactive, Argon2Moderate, Argon2Sensitive:
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
-	hm := &HashingManager{
+	hp := &HashingProvider{
 		algorithmType: algorithmType,
 	}
 
 	switch algorithmType {
 	case Argon2Interactive, Argon2Moderate, Argon2Sensitive:
-		argon2Config, err := hm.getDefaultArgon2Config()
+		argon2Config, err := hp.getDefaultArgon2Config()
 		if err != nil {
 			return nil, err
 		}
 
-		hm.argon2Config = argon2Config
+		hp.argon2Config = argon2Config
 	}
 
-	return hm, nil
+	return hp, nil
 }
 
-func (hm *HashingManager) Hash(data, salt []byte) ([]byte, error) {
-	switch hm.algorithmType {
+func (hp *HashingProvider) Hash(data, salt []byte) ([]byte, error) {
+	switch hp.algorithmType {
 	case SHA224, SHA256, SHA384, SHA512, SHA512_224, SHA512_256,
 		SHA3_224, SHA3_256, SHA3_384, SHA3_512:
-		return hm.hashSHA(data, salt)
+		return hp.hashSHA(data, salt)
 	case Bcrypt, BcryptMin, BcryptMax:
-		return hm.hashBcrypt(data, salt)
+		return hp.hashBcrypt(data, salt)
 	case Argon2Interactive, Argon2Moderate, Argon2Sensitive:
-		return hm.hashArgon2(data, salt)
+		return hp.hashArgon2(data, salt)
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 }
 
-func (hm *HashingManager) VerifyHash(data, salt, expectedHash []byte) (bool, error) {
-	switch hm.algorithmType {
+func (hp *HashingProvider) VerifyHash(data, salt, expectedHash []byte) (bool, error) {
+	switch hp.algorithmType {
 	case SHA224, SHA256, SHA384, SHA512, SHA512_224, SHA512_256,
 		SHA3_224, SHA3_256, SHA3_384, SHA3_512:
-		return hm.verifySHA(data, salt, expectedHash)
+		return hp.verifySHA(data, salt, expectedHash)
 	case Bcrypt, BcryptMin, BcryptMax:
-		return hm.verifyBcrypt(data, salt, expectedHash)
+		return hp.verifyBcrypt(data, salt, expectedHash)
 	case Argon2Interactive, Argon2Moderate, Argon2Sensitive:
-		return hm.verifyArgon2(data, salt, expectedHash)
+		return hp.verifyArgon2(data, salt, expectedHash)
 	default:
-		return false, crypto.ErrUnknownAlgorithmType
+		return false, core.ErrUnknownAlgorithmType
 	}
 }

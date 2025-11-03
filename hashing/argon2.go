@@ -3,7 +3,7 @@ package hashing
 import (
 	"crypto/subtle"
 
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -15,8 +15,8 @@ type Argon2Config struct {
 	SaltLength  uint32
 }
 
-func (hm *HashingManager) getDefaultArgon2Config() (Argon2Config, error) {
-	switch hm.algorithmType {
+func (hp *HashingProvider) getDefaultArgon2Config() (Argon2Config, error) {
+	switch hp.algorithmType {
 	case Argon2Interactive:
 		return Argon2Config{
 			Memory:      64 * 1024,
@@ -42,13 +42,13 @@ func (hm *HashingManager) getDefaultArgon2Config() (Argon2Config, error) {
 			SaltLength:  16,
 		}, nil
 	default:
-		return Argon2Config{}, crypto.ErrUnknownAlgorithmType
+		return Argon2Config{}, core.ErrUnknownAlgorithmType
 	}
 }
 
-func (hm *HashingManager) hashArgon2(data []byte, salt []byte) ([]byte, error) {
-	if len(salt) != 0 && len(salt) < int(hm.argon2Config.SaltLength) {
-		return nil, crypto.ErrArgon2SaltLengthShort
+func (hp *HashingProvider) hashArgon2(data []byte, salt []byte) ([]byte, error) {
+	if len(salt) != 0 && len(salt) < int(hp.argon2Config.SaltLength) {
+		return nil, core.ErrArgon2SaltLengthShort
 	}
 
 	if len(salt) == 0 {
@@ -56,24 +56,24 @@ func (hm *HashingManager) hashArgon2(data []byte, salt []byte) ([]byte, error) {
 	}
 
 	usedSalt := salt
-	if len(usedSalt) > int(hm.argon2Config.SaltLength) {
-		usedSalt = usedSalt[:hm.argon2Config.SaltLength]
+	if len(usedSalt) > int(hp.argon2Config.SaltLength) {
+		usedSalt = usedSalt[:hp.argon2Config.SaltLength]
 	}
 
 	hash := argon2.IDKey(
 		data,
 		usedSalt,
-		hm.argon2Config.Iterations,
-		hm.argon2Config.Memory,
-		hm.argon2Config.Parallelism,
-		hm.argon2Config.KeyLength,
+		hp.argon2Config.Iterations,
+		hp.argon2Config.Memory,
+		hp.argon2Config.Parallelism,
+		hp.argon2Config.KeyLength,
 	)
 
 	return hash, nil
 }
 
-func (hm *HashingManager) verifyArgon2(data, salt, expectedHash []byte) (bool, error) {
-	hash, err := hm.hashArgon2(data, salt)
+func (hp *HashingProvider) verifyArgon2(data, salt, expectedHash []byte) (bool, error) {
+	hash, err := hp.hashArgon2(data, salt)
 	if err != nil {
 		return false, err
 	}

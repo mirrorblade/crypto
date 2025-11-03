@@ -1,8 +1,6 @@
 package symmetric
 
-import (
-	"github.com/mirrorblade/crypto"
-)
+import "github.com/mirrorblade/crypto/core"
 
 type AlgorithmType string
 
@@ -36,49 +34,49 @@ func (al AlgorithmType) Type() string {
 	return string(al)
 }
 
-type Manager interface {
+type Provider interface {
 	Encrypt(plaintext []byte) ([]byte, error)
 	Decrypt(ciphertext []byte) ([]byte, error)
 }
 
-type SymmetricManager struct {
+type SymmetricProvider struct {
 	algorithmType AlgorithmType
 
 	secretKey []byte
 }
 
-func NewManager(algorithmType AlgorithmType, secretKey []byte) (*SymmetricManager, error) {
+func NewProvider(algorithmType AlgorithmType, secretKey []byte) (*SymmetricProvider, error) {
 	switch algorithmType {
 	case AES128, AES192, AES256,
 		ChaCha20, ChaCha20Poly1305, XChaCha20, XChaCha20Poly1305:
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
-	return &SymmetricManager{
+	return &SymmetricProvider{
 		algorithmType: algorithmType,
 		secretKey:     secretKey,
 	}, nil
 }
 
-func (sm *SymmetricManager) Encrypt(plaintext []byte) ([]byte, error) {
-	switch sm.algorithmType {
+func (sp *SymmetricProvider) Encrypt(plaintext []byte) ([]byte, error) {
+	switch sp.algorithmType {
 	case AES128, AES192, AES256:
-		return sm.encryptAES(plaintext)
+		return sp.encryptAES(plaintext)
 	case ChaCha20, ChaCha20Poly1305, XChaCha20, XChaCha20Poly1305:
-		return sm.encryptChaCha(plaintext)
+		return sp.encryptChaCha(plaintext)
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 }
 
-func (sm *SymmetricManager) Decrypt(ciphertext []byte) ([]byte, error) {
-	switch sm.algorithmType {
+func (sp *SymmetricProvider) Decrypt(ciphertext []byte) ([]byte, error) {
+	switch sp.algorithmType {
 	case AES128, AES192, AES256:
-		return sm.decryptAES(ciphertext)
+		return sp.decryptAES(ciphertext)
 	case ChaCha20, ChaCha20Poly1305, XChaCha20, XChaCha20Poly1305:
-		return sm.decryptChaCha(ciphertext)
+		return sp.decryptChaCha(ciphertext)
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 }

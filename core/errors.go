@@ -1,4 +1,4 @@
-package crypto
+package core
 
 import "errors"
 
@@ -7,8 +7,8 @@ var (
 	ErrUnknownKeySize       = errors.New("unknown key size")
 	ErrFailedKeyGeneration  = errors.New("key generation was failed")
 
-	ErrNoManagerProvided           = errors.New("no manager is provided")
-	ErrNoCallbackFunctionsProvided = errors.New("no callback functions are provided")
+	ErrNoProviderDefined          = errors.New("no provider is defined")
+	ErrNoCallbackFunctionsDefined = errors.New("no callback functions are defined")
 
 	ErrFailedPEMBlockParsing = errors.New("PEM block parsing was failed")
 	ErrInvalidPEMBlock       = errors.New("PEM block is invalid")

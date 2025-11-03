@@ -1,14 +1,14 @@
 package hashing
 
 import (
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (hm *HashingManager) hashBcrypt(data []byte, salt []byte) ([]byte, error) {
+func (hp *HashingProvider) hashBcrypt(data []byte, salt []byte) ([]byte, error) {
 	var cost int
 
-	switch hm.algorithmType {
+	switch hp.algorithmType {
 	case Bcrypt:
 		cost = 12
 	case BcryptMin:
@@ -16,7 +16,7 @@ func (hm *HashingManager) hashBcrypt(data []byte, salt []byte) ([]byte, error) {
 	case BcryptMax:
 		cost = 31
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
 	updatedData := data
@@ -33,7 +33,7 @@ func (hm *HashingManager) hashBcrypt(data []byte, salt []byte) ([]byte, error) {
 	return hash, nil
 }
 
-func (hm *HashingManager) verifyBcrypt(data []byte, salt []byte, expectedHash []byte) (bool, error) {
+func (hp *HashingProvider) verifyBcrypt(data []byte, salt []byte, expectedHash []byte) (bool, error) {
 	updatedData := data
 
 	if len(salt) > 0 {

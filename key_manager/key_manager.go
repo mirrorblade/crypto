@@ -10,8 +10,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/mirrorblade/crypto"
 	"github.com/mirrorblade/crypto/asymmetric"
+	"github.com/mirrorblade/crypto/core"
 	"github.com/mirrorblade/crypto/symmetric"
 )
 
@@ -47,7 +47,7 @@ func GenerateKeyPair(algorithmType asymmetric.AlgorithmType) (privateKey, public
 		asymmetric.P521:
 		return generateECKeyPair(algorithmType.Size())
 	default:
-		return nil, nil, crypto.ErrUnknownAlgorithmType
+		return nil, nil, core.ErrUnknownAlgorithmType
 	}
 }
 
@@ -55,12 +55,12 @@ func GenerateSecretKey(algorithmType symmetric.AlgorithmType) (secretKey []byte,
 	switch algorithmType {
 	case symmetric.AES128, symmetric.AES192, symmetric.AES256, symmetric.ChaCha20, symmetric.ChaCha20Poly1305, symmetric.XChaCha20, symmetric.XChaCha20Poly1305:
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
 	key := make([]byte, algorithmType.Size())
 	if _, err := io.ReadFull(rand.Reader, key); err != nil {
-		return nil, crypto.ErrFailedKeyGeneration
+		return nil, core.ErrFailedKeyGeneration
 	}
 
 	return key, nil
@@ -69,16 +69,16 @@ func GenerateSecretKey(algorithmType symmetric.AlgorithmType) (secretKey []byte,
 func generateRSAKeyPair(bits int) (privateKey, publicKey []byte, err error) {
 	priv, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
-		return nil, nil, crypto.ErrFailedKeyGeneration
+		return nil, nil, core.ErrFailedKeyGeneration
 	}
 
 	if err := priv.Validate(); err != nil {
-		return nil, nil, crypto.ErrFailedKeyGeneration
+		return nil, nil, core.ErrFailedKeyGeneration
 	}
 
 	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
 	if err != nil {
-		return nil, nil, crypto.ErrFailedKeyGeneration
+		return nil, nil, core.ErrFailedKeyGeneration
 	}
 	privBlock := &pem.Block{
 		Type:  "PRIVATE KEY",
@@ -88,7 +88,7 @@ func generateRSAKeyPair(bits int) (privateKey, publicKey []byte, err error) {
 
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
-		return nil, nil, crypto.ErrFailedKeyGeneration
+		return nil, nil, core.ErrFailedKeyGeneration
 	}
 	pubBlock := &pem.Block{
 		Type:  "PUBLIC KEY",
@@ -112,7 +112,7 @@ func generateECKeyPair(bits int) (privateKey, publicKey []byte, err error) {
 	case 66:
 		curve = elliptic.P521()
 	default:
-		return nil, nil, crypto.ErrUnknownKeySize
+		return nil, nil, core.ErrUnknownKeySize
 	}
 
 	priv, err := ecdsa.GenerateKey(curve, rand.Reader)

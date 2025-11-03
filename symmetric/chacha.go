@@ -4,15 +4,15 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 	"golang.org/x/crypto/chacha20"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-func (sm *SymmetricManager) encryptChaCha(plaintext []byte) ([]byte, error) {
+func (sp *SymmetricProvider) encryptChaCha(plaintext []byte) ([]byte, error) {
 	var nonceSize int
 
-	switch sm.algorithmType {
+	switch sp.algorithmType {
 	case ChaCha20:
 		nonceSize = chacha20.NonceSize
 	case XChaCha20:
@@ -22,7 +22,7 @@ func (sm *SymmetricManager) encryptChaCha(plaintext []byte) ([]byte, error) {
 	case XChaCha20Poly1305:
 		nonceSize = chacha20poly1305.NonceSizeX
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
 	nonce := make([]byte, nonceSize)
@@ -32,10 +32,10 @@ func (sm *SymmetricManager) encryptChaCha(plaintext []byte) ([]byte, error) {
 
 	var ciphertext []byte
 
-	switch sm.algorithmType {
+	switch sp.algorithmType {
 	case ChaCha20, XChaCha20:
 		ciphertext := make([]byte, len(plaintext))
-		cipher, err := chacha20.NewUnauthenticatedCipher(sm.secretKey, nonce)
+		cipher, err := chacha20.NewUnauthenticatedCipher(sp.secretKey, nonce)
 		if err != nil {
 			return nil, err
 		}
@@ -48,11 +48,11 @@ func (sm *SymmetricManager) encryptChaCha(plaintext []byte) ([]byte, error) {
 			err  error
 		)
 
-		switch sm.algorithmType {
+		switch sp.algorithmType {
 		case ChaCha20Poly1305:
-			aead, err = chacha20poly1305.New(sm.secretKey)
+			aead, err = chacha20poly1305.New(sp.secretKey)
 		case XChaCha20Poly1305:
-			aead, err = chacha20poly1305.NewX(sm.secretKey)
+			aead, err = chacha20poly1305.NewX(sp.secretKey)
 		}
 
 		if err != nil {
@@ -69,10 +69,10 @@ func (sm *SymmetricManager) encryptChaCha(plaintext []byte) ([]byte, error) {
 	return result, nil
 }
 
-func (sm *SymmetricManager) decryptChaCha(data []byte) ([]byte, error) {
+func (sp *SymmetricProvider) decryptChaCha(data []byte) ([]byte, error) {
 	var nonceSize int
 
-	switch sm.algorithmType {
+	switch sp.algorithmType {
 	case ChaCha20:
 		nonceSize = chacha20.NonceSize
 	case XChaCha20:
@@ -82,11 +82,11 @@ func (sm *SymmetricManager) decryptChaCha(data []byte) ([]byte, error) {
 	case XChaCha20Poly1305:
 		nonceSize = chacha20poly1305.NonceSizeX
 	default:
-		return nil, crypto.ErrUnknownAlgorithmType
+		return nil, core.ErrUnknownAlgorithmType
 	}
 
 	if len(data) < nonceSize {
-		return nil, crypto.ErrCipherTextInvalidLength
+		return nil, core.ErrCipherTextInvalidLength
 	}
 
 	nonce := data[:nonceSize]
@@ -94,10 +94,10 @@ func (sm *SymmetricManager) decryptChaCha(data []byte) ([]byte, error) {
 
 	var plaintext []byte
 
-	switch sm.algorithmType {
+	switch sp.algorithmType {
 	case ChaCha20, XChaCha20:
 		plaintext := make([]byte, len(ciphertext))
-		cipher, err := chacha20.NewUnauthenticatedCipher(sm.secretKey, nonce)
+		cipher, err := chacha20.NewUnauthenticatedCipher(sp.secretKey, nonce)
 		if err != nil {
 			return nil, err
 		}
@@ -110,11 +110,11 @@ func (sm *SymmetricManager) decryptChaCha(data []byte) ([]byte, error) {
 			err  error
 		)
 
-		switch sm.algorithmType {
+		switch sp.algorithmType {
 		case ChaCha20Poly1305:
-			aead, err = chacha20poly1305.New(sm.secretKey)
+			aead, err = chacha20poly1305.New(sp.secretKey)
 		case XChaCha20Poly1305:
-			aead, err = chacha20poly1305.NewX(sm.secretKey)
+			aead, err = chacha20poly1305.NewX(sp.secretKey)
 		}
 
 		if err != nil {

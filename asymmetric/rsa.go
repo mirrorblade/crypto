@@ -6,11 +6,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 
-	"github.com/mirrorblade/crypto"
+	"github.com/mirrorblade/crypto/core"
 )
 
-func (am *AsymmetricManager) encryptRSA(plaintext []byte) ([]byte, error) {
-	publicKey, err := am.publicKeyToRSA()
+func (ap *AsymmetricProvider) encryptRSA(plaintext []byte) ([]byte, error) {
+	publicKey, err := ap.publicKeyToRSA()
 	if err != nil {
 		return nil, err
 	}
@@ -18,8 +18,8 @@ func (am *AsymmetricManager) encryptRSA(plaintext []byte) ([]byte, error) {
 	return rsa.EncryptPKCS1v15(rand.Reader, publicKey, plaintext)
 }
 
-func (am *AsymmetricManager) decryptRSA(ciphertext []byte) ([]byte, error) {
-	privateKey, err := am.privateKeyToRSA()
+func (ap *AsymmetricProvider) decryptRSA(ciphertext []byte) ([]byte, error) {
+	privateKey, err := ap.privateKeyToRSA()
 	if err != nil {
 		return nil, err
 	}
@@ -27,39 +27,39 @@ func (am *AsymmetricManager) decryptRSA(ciphertext []byte) ([]byte, error) {
 	return rsa.DecryptPKCS1v15(rand.Reader, privateKey, ciphertext)
 }
 
-func (am *AsymmetricManager) publicKeyToRSA() (*rsa.PublicKey, error) {
-	block, _ := pem.Decode(am.publicKey)
+func (ap *AsymmetricProvider) publicKeyToRSA() (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(ap.publicKey)
 	if block == nil {
-		return nil, crypto.ErrFailedPEMBlockParsing
+		return nil, core.ErrFailedPEMBlockParsing
 	}
 
 	untypedPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return nil, crypto.ErrInvalidPKIXKey
+		return nil, core.ErrInvalidPKIXKey
 	}
 
 	publicKey, ok := untypedPublicKey.(*rsa.PublicKey)
 	if !ok {
-		return nil, crypto.ErrInvalidPublicKey
+		return nil, core.ErrInvalidPublicKey
 	}
 
 	return publicKey, nil
 }
 
-func (am *AsymmetricManager) privateKeyToRSA() (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode(am.privateKey)
+func (ap *AsymmetricProvider) privateKeyToRSA() (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(ap.privateKey)
 	if block == nil {
-		return nil, crypto.ErrFailedPEMBlockParsing
+		return nil, core.ErrFailedPEMBlockParsing
 	}
 
 	untypedPrivateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, crypto.ErrInvalidPKIXKey
+		return nil, core.ErrInvalidPKIXKey
 	}
 
 	privateKey, ok := untypedPrivateKey.(*rsa.PrivateKey)
 	if !ok {
-		return nil, crypto.ErrInvalidPrivateKey
+		return nil, core.ErrInvalidPrivateKey
 	}
 
 	return privateKey, nil
