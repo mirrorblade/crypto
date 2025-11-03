@@ -132,6 +132,7 @@ func UnmarshalKey(key []byte) (any, error) {
 	if block.Type[:6] == "PUBLIC" {
 		return x509.ParsePKIXPublicKey(block.Bytes)
 	}
+
 	return nil, core.ErrUnknownKeyFormat
 }
 
@@ -212,7 +213,7 @@ func SaveKeyPair(privateFilename, publicFilename string, privateKey, publicKey [
 		return err
 	}
 
-	if err := os.WriteFile(publicFilename, privateKey, 0600); err != nil {
+	if err := os.WriteFile(publicFilename, publicKey, 0600); err != nil {
 		return os.Remove(privateFilename)
 	}
 
