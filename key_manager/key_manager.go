@@ -33,7 +33,120 @@ func LoadSecretKey(filename string) (secretKey []byte, err error) {
 	return os.ReadFile(filename)
 }
 
-func GenerateKeyPair(algorithmType asymmetric.AlgorithmType) (privateKey, publicKey []byte, err error) {
+func MarshalPrivateKey(key any, keyFormat core.KeyFormat) ([]byte, error) {
+	var (
+		privateKey []byte
+		keyType    string
+		err        error
+	)
+
+	switch keyFormat {
+	case core.PKCS8Format:
+		privateKey, err = x509.MarshalPKCS8PrivateKey(key)
+
+	case core.PKCS1Format:
+		if parsedKey, ok := key.(*rsa.PrivateKey); ok {
+			privateKey = x509.MarshalPKCS1PrivateKey(parsedKey)
+			keyType = "RSA "
+		} else {
+			err = core.ErrUnknownKeyFormat
+		}
+
+	case core.SEC1Format:
+		if parsedKey, ok := key.(*ecdsa.PrivateKey); ok {
+			privateKey, err = x509.MarshalECPrivateKey(parsedKey)
+			keyType = "EC "
+		} else {
+			err = core.ErrUnknownKeyFormat
+		}
+
+	default:
+		return nil, core.ErrUnknownKeyFormat
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  keyType + "PRIVATE KEY",
+		Bytes: privateKey,
+	}), nil
+}
+
+func MarshalPublicKey(key any, keyFormat core.KeyFormat) ([]byte, error) {
+	var (
+		publicKey []byte
+		keyType   string
+		err       error
+	)
+
+	switch keyFormat {
+	case core.PKCS1Format:
+		if parsedKey, ok := key.(*rsa.PublicKey); ok {
+			publicKey = x509.MarshalPKCS1PublicKey(parsedKey)
+			keyType = "RSA "
+		} else {
+			err = core.ErrUnknownKeyFormat
+		}
+
+	case core.PKIXFormat:
+		publicKey, err = x509.MarshalPKIXPublicKey(key)
+
+	default:
+		return nil, core.ErrUnknownKeyFormat
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  keyType + "PUBLIC KEY",
+		Bytes: publicKey,
+	}), nil
+}
+
+func UnmarshalPrivateKey(key []byte, keyFormat core.KeyFormat) (any, error) {
+	block, _ := pem.Decode(key)
+	if block == nil {
+		return nil, core.ErrFailedPEMBlockParsing
+	}
+
+	switch keyFormat {
+	case core.PKCS8Format:
+		return x509.ParsePKCS8PrivateKey(block.Bytes)
+
+	case core.PKCS1Format:
+		return x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	case core.SEC1Format:
+		return x509.ParseECPrivateKey(block.Bytes)
+
+	default:
+		return nil, core.ErrUnknownKeyFormat
+	}
+}
+
+func UnmarshalPublicKey(key []byte, keyFormat core.KeyFormat) (any, error) {
+	block, _ := pem.Decode(key)
+	if block == nil {
+		return nil, core.ErrFailedPEMBlockParsing
+	}
+
+	switch keyFormat {
+	case core.PKCS1Format:
+		return x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	case core.PKIXFormat:
+		return x509.ParsePKIXPublicKey(block.Bytes)
+
+	default:
+		return nil, core.ErrUnknownKeyFormat
+	}
+}
+
+func GenerateKeyPair(algorithmType asymmetric.AlgorithmType) (privateKey, publicKey any, err error) {
 	switch algorithmType {
 	case asymmetric.RSA1024,
 		asymmetric.RSA2048,
@@ -41,11 +154,13 @@ func GenerateKeyPair(algorithmType asymmetric.AlgorithmType) (privateKey, public
 		asymmetric.RSA4096,
 		asymmetric.RSA8192:
 		return generateRSAKeyPair(algorithmType.Size() * 8)
+
 	case asymmetric.P224,
 		asymmetric.P256,
 		asymmetric.P384,
 		asymmetric.P521:
 		return generateECKeyPair(algorithmType.Size())
+
 	default:
 		return nil, nil, core.ErrUnknownAlgorithmType
 	}
@@ -66,7 +181,7 @@ func GenerateSecretKey(algorithmType symmetric.AlgorithmType) (secretKey []byte,
 	return key, nil
 }
 
-func generateRSAKeyPair(bits int) (privateKey, publicKey []byte, err error) {
+func generateRSAKeyPair(bits int) (privateKey, publicKey any, err error) {
 	priv, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
 		return nil, nil, core.ErrFailedKeyGeneration
@@ -76,30 +191,10 @@ func generateRSAKeyPair(bits int) (privateKey, publicKey []byte, err error) {
 		return nil, nil, core.ErrFailedKeyGeneration
 	}
 
-	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
-	if err != nil {
-		return nil, nil, core.ErrFailedKeyGeneration
-	}
-	privBlock := &pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: privBytes,
-	}
-	privateKey = pem.EncodeToMemory(privBlock)
-
-	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-	if err != nil {
-		return nil, nil, core.ErrFailedKeyGeneration
-	}
-	pubBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubBytes,
-	}
-	publicKey = pem.EncodeToMemory(pubBlock)
-
-	return privateKey, publicKey, nil
+	return priv, &priv.PublicKey, nil
 }
 
-func generateECKeyPair(bits int) (privateKey, publicKey []byte, err error) {
+func generateECKeyPair(bits int) (privateKey, publicKey any, err error) {
 	var curve elliptic.Curve
 
 	switch bits {
@@ -120,31 +215,7 @@ func generateECKeyPair(bits int) (privateKey, publicKey []byte, err error) {
 		return nil, nil, err
 	}
 
-	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	privBlock := &pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: privDER,
-	}
-
-	privateKey = pem.EncodeToMemory(privBlock)
-
-	pubDER, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pubBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubDER,
-	}
-
-	publicKey = pem.EncodeToMemory(pubBlock)
-
-	return privateKey, publicKey, nil
+	return priv, &priv.PublicKey, nil
 }
 
 func SaveKeyPair(privateFilename, publicFilename string, privateKey, publicKey []byte) error {

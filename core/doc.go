@@ -1,2 +1,2 @@
-// Package core provides common errors for the crypto library
+// Package core provides common types and errors for the crypto library
 package core
