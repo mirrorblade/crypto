@@ -5,7 +5,9 @@ import "errors"
 var (
 	ErrUnknownAlgorithmType = errors.New("unknown algorithm type")
 	ErrUnknownKeySize       = errors.New("unknown key size")
-	ErrFailedKeyGeneration  = errors.New("key generation was failed")
+	ErrUnknownKeyFormat     = errors.New("unknown key format")
+
+	ErrFailedKeyGeneration = errors.New("key generation was failed")
 
 	ErrNoProviderDefined          = errors.New("no provider is defined")
 	ErrNoCallbackFunctionsDefined = errors.New("no callback functions are defined")
