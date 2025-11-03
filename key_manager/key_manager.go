@@ -107,43 +107,32 @@ func MarshalPublicKey(key any, keyFormat core.KeyFormat) ([]byte, error) {
 	}), nil
 }
 
-func UnmarshalPrivateKey(key []byte, keyFormat core.KeyFormat) (any, error) {
+func UnmarshalKey(key []byte) (any, error) {
 	block, _ := pem.Decode(key)
 	if block == nil {
 		return nil, core.ErrFailedPEMBlockParsing
 	}
 
-	switch keyFormat {
-	case core.PKCS8Format:
-		return x509.ParsePKCS8PrivateKey(block.Bytes)
-
-	case core.PKCS1Format:
-		return x509.ParsePKCS1PrivateKey(block.Bytes)
-
-	case core.SEC1Format:
+	if block.Type[:2] == "EC" {
 		return x509.ParseECPrivateKey(block.Bytes)
-
-	default:
-		return nil, core.ErrUnknownKeyFormat
-	}
-}
-
-func UnmarshalPublicKey(key []byte, keyFormat core.KeyFormat) (any, error) {
-	block, _ := pem.Decode(key)
-	if block == nil {
-		return nil, core.ErrFailedPEMBlockParsing
 	}
 
-	switch keyFormat {
-	case core.PKCS1Format:
-		return x509.ParsePKCS1PrivateKey(block.Bytes)
+	if block.Type[:3] == "RSA" {
+		if block.Type[4:11] == "PRIVATE" {
+			return x509.ParsePKCS1PrivateKey(block.Bytes)
+		} else {
+			return x509.ParsePKCS1PublicKey(block.Bytes)
+		}
+	}
 
-	case core.PKIXFormat:
+	if block.Type[:7] == "PRIVATE" {
+		return x509.ParsePKCS8PrivateKey(block.Bytes)
+	}
+
+	if block.Type[:6] == "PUBLIC" {
 		return x509.ParsePKIXPublicKey(block.Bytes)
-
-	default:
-		return nil, core.ErrUnknownKeyFormat
 	}
+	return nil, core.ErrUnknownKeyFormat
 }
 
 func GenerateKeyPair(algorithmType asymmetric.AlgorithmType) (privateKey, publicKey any, err error) {
